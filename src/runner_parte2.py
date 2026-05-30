@@ -132,31 +132,50 @@ def run_parte2(data_dir, out_dir, alg=None, source=None, target=None):
         except ValueError as e:
             print(f"  AVISO Dijkstra: {e}")
 
+    # Subgrafo pequeno para Bellman-Ford — top 200 nós mais conectados
+    # Justificativa: BF é O(V*E), inviável no grafo completo (4600 nós * 119k arestas)
+    print("\n=== Preparando subgrafo para Bellman-Ford (top 200 nós) ===")
+    top200 = sorted(graph.nodes, key=lambda u: -graph.degree(u))[:200]
+    top200_set = set(top200)
+    bf_graph = Graph(directed=True)
+    for u in top200:
+        bf_graph.add_node(u)
+    for u in top200:
+        for v, w in graph.get_neighbors(u):
+            if v in top200_set:
+                bf_graph.add_edge(u, v, w)
+    print(f"Subgrafo BF: {bf_graph.num_nodes()} nós, {bf_graph.num_edges()} arestas")
+
+    bf_src_sub = bf_src if bf_src in top200_set else top200[0]
+    bf_tgt_sub = bf_tgt if bf_tgt in top200_set else top200[1]
+
     print("\n=== Bellman-Ford (pesos normais) ===")
-    res, t, mem = run_timed(bellman_ford, graph, bf_src, track_memory=True)
-    path = reconstruct_path_bf(res["parent"], bf_src, bf_tgt)
-    fmt = format_bf_result(res, bf_src, bf_tgt, path)
+    res, t, mem = run_timed(bellman_ford, bf_graph, bf_src_sub, track_memory=True)
+    path = reconstruct_path_bf(res["parent"], bf_src_sub, bf_tgt_sub)
+    fmt = format_bf_result(res, bf_src_sub, bf_tgt_sub, path)
     fmt["time_s"] = t
     fmt["mem_kb"] = mem
     fmt["scenario"] = "normal_weights"
+    fmt["note"] = "Executado em subgrafo dos 200 nós mais conectados"
     report["bellman_ford"].append(fmt)
-    performance_log.append({"algorithm": "Bellman-Ford", "task": f"{bf_src}->{bf_tgt}", "time_s": t, "mem_kb": mem})
-    print(f"BF {bf_src}->{bf_tgt}: dist={fmt['distance']}, neg_cycle={fmt['has_negative_cycle']}, {t:.4f}s")
+    performance_log.append({"algorithm": "Bellman-Ford", "task": f"{bf_src_sub}->{bf_tgt_sub}", "time_s": t, "mem_kb": mem})
+    print(f"BF {bf_src_sub}->{bf_tgt_sub}: dist={fmt['distance']}, neg_cycle={fmt['has_negative_cycle']}, {t:.4f}s")
 
     print("\n=== Bellman-Ford (peso negativo sem ciclo negativo) ===")
     import copy
-    g_neg = copy.deepcopy(graph)
-    inject_negative_weights(g_neg, [(bf_src, bf_tgt)], bonus=-0.5)
-    res_neg, t, mem = run_timed(bellman_ford, g_neg, bf_src, track_memory=True)
-    path_neg = reconstruct_path_bf(res_neg["parent"], bf_src, bf_tgt)
-    fmt_neg = format_bf_result(res_neg, bf_src, bf_tgt, path_neg)
+    g_neg = copy.deepcopy(bf_graph)
+    inject_negative_weights(g_neg, [(bf_src_sub, bf_tgt_sub)], bonus=-0.5)
+    res_neg, t, mem = run_timed(bellman_ford, g_neg, bf_src_sub, track_memory=True)
+    path_neg = reconstruct_path_bf(res_neg["parent"], bf_src_sub, bf_tgt_sub)
+    fmt_neg = format_bf_result(res_neg, bf_src_sub, bf_tgt_sub, path_neg)
     fmt_neg["time_s"] = t
     fmt_neg["mem_kb"] = mem
     fmt_neg["scenario"] = "negative_weight_no_cycle"
-    fmt_neg["injected_edge"] = f"{bf_src}->{bf_tgt} w=-0.5"
+    fmt_neg["injected_edge"] = f"{bf_src_sub}->{bf_tgt_sub} w=-0.5"
+    fmt_neg["note"] = "Executado em subgrafo dos 200 nós mais conectados"
     report["bellman_ford"].append(fmt_neg)
-    performance_log.append({"algorithm": "Bellman-Ford", "task": f"neg_no_cycle_{bf_src}->{bf_tgt}", "time_s": t, "mem_kb": mem})
-    print(f"BF neg {bf_src}->{bf_tgt}: dist={fmt_neg['distance']}, neg_cycle={fmt_neg['has_negative_cycle']}, {t:.4f}s")
+    performance_log.append({"algorithm": "Bellman-Ford", "task": f"neg_no_cycle_{bf_src_sub}->{bf_tgt_sub}", "time_s": t, "mem_kb": mem})
+    print(f"BF neg {bf_src_sub}->{bf_tgt_sub}: dist={fmt_neg['distance']}, neg_cycle={fmt_neg['has_negative_cycle']}, {t:.4f}s")
 
     print("\n=== Bellman-Ford (ciclo negativo detectado) ===")
     cycle_g = Graph(directed=True)

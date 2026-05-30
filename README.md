@@ -112,3 +112,44 @@ O grafo Wikispeedia tem pesos naturalmente positivos (`1/grau_saída`). Para ate
 
 - **Cenário 1 — peso negativo sem ciclo:** uma aresta recebe peso `-0.5`, simulando um "atalho privilegiado" de navegação (ex: link de redirecionamento direto de alta relevância).
 - **Cenário 2 — ciclo negativo detectado:** subgrafo dirigido controlado com 3 nós e arestas `-1.0` formando um ciclo A→B→C→A. O algoritmo detecta e sinaliza corretamente.
+
+---
+
+## Visualização React (Grafo Completo)
+
+O app React em `web/` renderiza o grafo completo (~4.600 nós, ~119.000 arestas) usando Canvas + D3.js, com performance muito superior ao Streamlit para esse volume de dados.
+
+### Funcionalidades
+- Grafo completo com todos os nós e arestas
+- Filtro por categoria (clique na legenda)
+- Busca de artigo por nome
+- Caminho mínimo entre dois artigos (Dijkstra rodando no browser)
+- Hover com tooltip de detalhes
+- Zoom, pan e arrastar nós
+
+### Como rodar
+
+**Passo 1 — Exportar o grafo (só precisa fazer uma vez):**
+```bash
+# Na raiz do projeto
+python -m src.export_graph_json ./data/dataset_parte2 ./web/public
+```
+Isso gera `web/public/graph_data.json`.
+
+**Passo 2 — Instalar dependências do React:**
+```bash
+cd web
+npm install
+```
+
+**Passo 3 — Rodar em desenvolvimento:**
+```bash
+npm run dev
+```
+Abre em `http://localhost:5173`
+
+**Passo 4 — Build para produção (gera HTML estático):**
+```bash
+npm run build
+```
+Os arquivos ficam em `web/dist/` e podem ser abertos diretamente no navegador.
