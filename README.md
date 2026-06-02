@@ -87,9 +87,29 @@ python -m pytest tests/ -v
 | `performance_bars.png` | Tempo médio por algoritmo |
 | `comparison_lines.png` | Tempo por execução individual |
 | `distance_heatmap.png` | Heatmap de distâncias Dijkstra entre pares |
+| `in_out_degree_distribution.png` | Compara graus de entrada e saida em escala log |
+| `degree_in_out_scatter.png` | Dispersao entrada x saida para identificar hubs |
+| `weight_distribution.png` | Distribuicao dos pesos `1/grau_saida` |
+| `bfs_layers.png` | Comportamento do BFS por camadas |
+| `dfs_edge_classes.png` | Classificacao de arestas no DFS |
+| `dijkstra_paths.png` | Distancia ponderada versus saltos nos caminhos |
+| `bellman_ford_scenarios.png` | Cenarios de Bellman-Ford com pesos negativos |
+| `avd_interactive_charts.html` | Dashboard HTML interativo com zoom, tooltips e janela deslizante |
 | `grafo_interativo.html` | Visualização D3.js interativa — abre direto no navegador |
+| `parte2_avd_notes.md` | Notas analiticas para apoiar o PDF tecnico |
 
 O `grafo_interativo.html` pode ser aberto **diretamente no navegador** sem precisar do Streamlit.
+
+### Camada AVD
+
+As visualizacoes seguem as recomendacoes do PDF interdisciplinar:
+
+- cores consistentes por algoritmo em barras e linhas;
+- eixos e legendas explicitos para comparabilidade;
+- separacao visual entre grafo completo e subgrafo usado no Bellman-Ford;
+- heatmap distinguindo distancia infinita de distancia zero;
+- graficos de comportamento, nao apenas desempenho: camadas do BFS, classes do DFS e caminhos do Dijkstra;
+- discussao de limitacoes visuais em `out/parte2_avd_notes.md`, especialmente densidade, sobreposicao de arestas e limites do peso `1/grau_saida`.
 
 ---
 

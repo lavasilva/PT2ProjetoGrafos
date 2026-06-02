@@ -7,7 +7,7 @@ from src.graph import Graph
 from src.bfs_dfs import bfs, dfs
 from src.dijkstra import dijkstra, reconstruct_path
 from src.bellman_ford import bellman_ford, reconstruct_path_bf
-from src.loader_parte2 import build_graph, inject_negative_weights, save_report
+from src.loader_parte2 import build_graph, save_report
 from src.metrics import (
     run_timed,
     describe_graph,
@@ -20,9 +20,17 @@ from src.metrics import (
 )
 from src.visualizations import (
     plot_degree_distribution,
+    plot_in_out_degree_distribution,
+    plot_degree_scatter,
+    plot_weight_distribution,
     plot_performance_bars,
     plot_distance_heatmap,
     plot_algorithm_comparison_lines,
+    plot_bfs_layers,
+    plot_dfs_edge_classes,
+    plot_dijkstra_paths,
+    plot_bellman_ford_scenarios,
+    export_interactive_avd_charts,
     export_graph_sample_pyvis,
 )
 
@@ -50,6 +58,107 @@ def pick_nodes(graph, preferred, n):
         ]
         result += extras[: n - len(result)]
     return result[:n]
+
+
+def directed_degree_summary(graph, limit=10):
+    in_degree = {node: 0 for node in graph.nodes}
+    out_degree = {node: graph.degree(node) for node in graph.nodes}
+    for _, v, _ in graph.edges():
+        in_degree[v] = in_degree.get(v, 0) + 1
+
+    top_out = sorted(out_degree.items(), key=lambda item: (-item[1], item[0]))[:limit]
+    top_in = sorted(in_degree.items(), key=lambda item: (-item[1], item[0]))[:limit]
+    return {
+        "top_out_degree": [{"node": node, "degree": degree} for node, degree in top_out],
+        "top_in_degree": [{"node": node, "degree": degree} for node, degree in top_in],
+        "avg_in_degree": round(sum(in_degree.values()) / max(len(in_degree), 1), 2),
+        "avg_out_degree": round(sum(out_degree.values()) / max(len(out_degree), 1), 2),
+    }
+
+
+def weight_summary(graph):
+    weights = [w for _, _, w in graph.edges()]
+    if not weights:
+        return {}
+    return {
+        "min": min(weights),
+        "max": max(weights),
+        "avg": round(sum(weights) / len(weights), 6),
+        "model": "peso = 1 / grau_de_saida da origem",
+        "interpretation": (
+            "arestas saindo de artigos com poucos links recebem maior peso; "
+            "arestas saindo de hubs recebem menor peso individual"
+        ),
+    }
+
+
+def build_avd_notes():
+    return [
+        "Cores de algoritmos foram mantidas consistentes nos graficos comparativos.",
+        "Graficos de barras e linhas usam eixos rotulados para favorecer comparabilidade.",
+        "O heatmap separa distancia infinita de distancia zero para evitar leitura enganosa.",
+        "A visualizacao interativa reduz ruido com amostragem, transparencia e filtros por categoria.",
+        "Bellman-Ford aparece observado porque foi executado em subgrafo controlado pelo custo O(V*E).",
+        "A principal limitacao visual e a densidade: 119.882 arestas sobrepostas tornam o grafo completo ilegivel sem filtros.",
+    ]
+
+
+def save_avd_markdown(report, out_dir):
+    graph = report["graph_description"]
+    degree = graph["degree_stats"]
+    lines = [
+        "# Notas Analiticas AVD - Parte 2",
+        "",
+        "## Contexto",
+        "O dataset Wikispeedia foi modelado como grafo dirigido e ponderado: cada artigo e um no, cada hiperlink e uma aresta, e o peso segue a regra `1 / grau_de_saida`.",
+        "",
+        "## Leitura do Dataset",
+        f"- Nos: {graph['num_nodes']}",
+        f"- Arestas: {graph['num_edges']}",
+        f"- Grau medio de saida: {degree.get('avg')}",
+        f"- Grau maximo de saida: {degree.get('max')}",
+        f"- Grau mediano de saida: {degree.get('median')}",
+        "",
+        "## Insights Visuais",
+        "- A distribuicao de graus tem cauda longa: poucos artigos funcionam como hubs, enquanto a maioria concentra poucos links de saida.",
+        "- A comparacao entre grau de entrada e saida ajuda a separar artigos que apontam para muitos temas daqueles que recebem muitas referencias.",
+        "- O heatmap de Dijkstra evidencia quais pares sao proximos no modelo ponderado e evita confundir distancia infinita com distancia zero.",
+        "- Os graficos de desempenho usam cores consistentes por algoritmo para reduzir carga cognitiva e melhorar comparabilidade.",
+        "",
+        "## Comparacao dos Algoritmos",
+        "- BFS e adequado quando o objetivo e minimizar numero de saltos, ignorando pesos.",
+        "- DFS e adequado para explorar profundidade, ciclos e classificacao de arestas.",
+        "- Dijkstra e adequado para pesos nao negativos e caminhos de menor custo no modelo escolhido.",
+        "- Bellman-Ford e adequado quando ha pesos negativos, mas seu custo O(V*E) limita o uso no grafo completo.",
+        "",
+        "## Limitacoes AVD",
+        "- O grafo completo com 119.882 arestas sofre com sobreposicao visual; por isso filtros, amostragem e transparencia sao essenciais.",
+        "- O peso `1 / grau_de_saida` favorece links de artigos especializados e pode reduzir a importancia visual de hubs generalistas.",
+        "- Comparar Bellman-Ford com os outros algoritmos exige cuidado, pois ele foi executado em subgrafo controlado para manter viabilidade.",
+        "",
+        "## Arquivos Visuais Gerados",
+        "- `degree_distribution.png`",
+        "- `in_out_degree_distribution.png`",
+        "- `degree_in_out_scatter.png`",
+        "- `weight_distribution.png`",
+        "- `performance_bars.png`",
+        "- `comparison_lines.png`",
+        "- `bfs_layers.png`",
+        "- `dfs_edge_classes.png`",
+        "- `dijkstra_paths.png`",
+        "- `bellman_ford_scenarios.png`",
+        "- `distance_heatmap.png`",
+        "- `grafo_interativo.html`",
+    ]
+    path = os.path.join(out_dir, "parte2_avd_notes.md")
+    try:
+        with open(path, "w", encoding="utf-8") as f:
+            f.write("\n".join(lines) + "\n")
+        print(f"Notas AVD salvas em {path}")
+        return path
+    except PermissionError as exc:
+        print(f"AVISO: nao foi possivel salvar {path}: {exc}")
+        return None
 
 
 def run_parte2(data_dir, out_dir, alg=None, source=None, target=None):
@@ -80,6 +189,8 @@ def run_parte2(data_dir, out_dir, alg=None, source=None, target=None):
     bf_tgt = bfs_sources[1] if len(bfs_sources) > 1 else nodes_list[1]
 
     graph_info = describe_graph(graph)
+    graph_info["directed_degree_summary"] = directed_degree_summary(graph)
+    graph_info["weight_summary"] = weight_summary(graph)
     print(json.dumps(graph_info, indent=2, default=str))
 
     performance_log = []
@@ -90,6 +201,7 @@ def run_parte2(data_dir, out_dir, alg=None, source=None, target=None):
         "dfs": [],
         "dijkstra": [],
         "bellman_ford": [],
+        "avd_notes": build_avd_notes(),
     }
 
     print("\n=== BFS ===")
@@ -127,10 +239,22 @@ def run_parte2(data_dir, out_dir, alg=None, source=None, target=None):
             if u not in distance_matrix:
                 distance_matrix[u] = {}
                 sample_labels.append(u)
+            if v not in sample_labels:
+                sample_labels.append(v)
             distance_matrix[u][v] = res["dist"].get(v, float("inf"))
             print(f"Dijkstra {u}->{v}: dist={fmt['distance']}, path_len={fmt['path_length']}, {t:.4f}s")
         except ValueError as e:
             print(f"  AVISO Dijkstra: {e}")
+
+    heatmap_labels = sample_labels[:8]
+    for u in heatmap_labels:
+        distance_matrix.setdefault(u, {})
+        try:
+            res = dijkstra(graph, u)
+            for v in heatmap_labels:
+                distance_matrix[u][v] = res["dist"].get(v, float("inf"))
+        except ValueError:
+            pass
 
     # Subgrafo pequeno para Bellman-Ford — top 200 nós mais conectados
     # Justificativa: BF é O(V*E), inviável no grafo completo (4600 nós * 119k arestas)
@@ -162,20 +286,24 @@ def run_parte2(data_dir, out_dir, alg=None, source=None, target=None):
     print(f"BF {bf_src_sub}->{bf_tgt_sub}: dist={fmt['distance']}, neg_cycle={fmt['has_negative_cycle']}, {t:.4f}s")
 
     print("\n=== Bellman-Ford (peso negativo sem ciclo negativo) ===")
-    import copy
-    g_neg = copy.deepcopy(bf_graph)
-    inject_negative_weights(g_neg, [(bf_src_sub, bf_tgt_sub)], bonus=-0.5)
-    res_neg, t, mem = run_timed(bellman_ford, g_neg, bf_src_sub, track_memory=True)
-    path_neg = reconstruct_path_bf(res_neg["parent"], bf_src_sub, bf_tgt_sub)
-    fmt_neg = format_bf_result(res_neg, bf_src_sub, bf_tgt_sub, path_neg)
+    g_neg = Graph(directed=True)
+    g_neg.add_edge("BF_A", "BF_B", 4.0)
+    g_neg.add_edge("BF_A", "BF_C", 2.0)
+    g_neg.add_edge("BF_C", "BF_B", -1.0)
+    g_neg.add_edge("BF_B", "BF_D", 3.0)
+    g_neg.add_edge("BF_C", "BF_D", 5.0)
+    neg_u, neg_v = "BF_A", "BF_D"
+    res_neg, t, mem = run_timed(bellman_ford, g_neg, neg_u, track_memory=True)
+    path_neg = reconstruct_path_bf(res_neg["parent"], neg_u, neg_v)
+    fmt_neg = format_bf_result(res_neg, neg_u, neg_v, path_neg)
     fmt_neg["time_s"] = t
     fmt_neg["mem_kb"] = mem
     fmt_neg["scenario"] = "negative_weight_no_cycle"
-    fmt_neg["injected_edge"] = f"{bf_src_sub}->{bf_tgt_sub} w=-0.5"
-    fmt_neg["note"] = "Executado em subgrafo dos 200 nós mais conectados"
+    fmt_neg["injected_edge"] = "BF_C->BF_B w=-1.0"
+    fmt_neg["note"] = "Executado em grafo controlado sem ciclo negativo para validar corretude"
     report["bellman_ford"].append(fmt_neg)
-    performance_log.append({"algorithm": "Bellman-Ford", "task": f"neg_no_cycle_{bf_src_sub}->{bf_tgt_sub}", "time_s": t, "mem_kb": mem})
-    print(f"BF neg {bf_src_sub}->{bf_tgt_sub}: dist={fmt_neg['distance']}, neg_cycle={fmt_neg['has_negative_cycle']}, {t:.4f}s")
+    performance_log.append({"algorithm": "Bellman-Ford", "task": f"neg_no_cycle_{neg_u}->{neg_v}", "time_s": t, "mem_kb": mem})
+    print(f"BF neg {neg_u}->{neg_v}: dist={fmt_neg['distance']}, neg_cycle={fmt_neg['has_negative_cycle']}, {t:.4f}s")
 
     print("\n=== Bellman-Ford (ciclo negativo detectado) ===")
     cycle_g = Graph(directed=True)
@@ -198,13 +326,22 @@ def run_parte2(data_dir, out_dir, alg=None, source=None, target=None):
 
     report["performance_table"] = build_performance_table(performance_log)
     save_report(report, out_dir)
+    save_avd_markdown(report, out_dir)
 
     print("\n=== Gerando visualizações ===")
     plot_degree_distribution(graph, out_dir)
+    plot_in_out_degree_distribution(graph, out_dir)
+    plot_degree_scatter(graph, out_dir)
+    plot_weight_distribution(graph, out_dir)
     plot_performance_bars(performance_log, out_dir)
     plot_algorithm_comparison_lines(performance_log, out_dir)
-    if sample_labels:
-        plot_distance_heatmap(distance_matrix, sample_labels, out_dir)
+    plot_bfs_layers(report["bfs"], out_dir)
+    plot_dfs_edge_classes(report["dfs"], out_dir)
+    plot_dijkstra_paths(report["dijkstra"], out_dir)
+    plot_bellman_ford_scenarios(report["bellman_ford"], out_dir)
+    if heatmap_labels:
+        plot_distance_heatmap(distance_matrix, heatmap_labels, out_dir)
+        export_interactive_avd_charts(graph, report, performance_log, distance_matrix, heatmap_labels, out_dir)
     export_graph_sample_pyvis(graph, out_dir, article_categories=article_categories)
 
     print(f"\n=== Parte 2 concluída. Saídas em {out_dir} ===")
