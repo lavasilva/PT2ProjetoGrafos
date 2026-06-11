@@ -30,7 +30,8 @@ from src.visualizations import (
     plot_dfs_edge_classes,
     plot_dijkstra_paths,
     plot_bellman_ford_scenarios,
-    export_interactive_avd_charts,
+    plot_top_hubs_ranking,
+    plot_category_distribution,
     export_graph_sample_pyvis,
 )
 
@@ -256,8 +257,6 @@ def run_parte2(data_dir, out_dir, alg=None, source=None, target=None):
         except ValueError:
             pass
 
-    # Subgrafo pequeno para Bellman-Ford — top 200 nós mais conectados
-    # Justificativa: BF é O(V*E), inviável no grafo completo (4600 nós * 119k arestas)
     print("\n=== Preparando subgrafo para Bellman-Ford (top 200 nós) ===")
     top200 = sorted(graph.nodes, key=lambda u: -graph.degree(u))[:200]
     top200_set = set(top200)
@@ -339,9 +338,10 @@ def run_parte2(data_dir, out_dir, alg=None, source=None, target=None):
     plot_dfs_edge_classes(report["dfs"], out_dir)
     plot_dijkstra_paths(report["dijkstra"], out_dir)
     plot_bellman_ford_scenarios(report["bellman_ford"], out_dir)
+    plot_top_hubs_ranking(graph, out_dir, n=15)
+    plot_category_distribution(article_categories, out_dir)
     if heatmap_labels:
         plot_distance_heatmap(distance_matrix, heatmap_labels, out_dir)
-        export_interactive_avd_charts(graph, report, performance_log, distance_matrix, heatmap_labels, out_dir)
     export_graph_sample_pyvis(graph, out_dir, article_categories=article_categories)
 
     print(f"\n=== Parte 2 concluída. Saídas em {out_dir} ===")
